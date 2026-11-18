@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>e-Services Portal (Demo)</title>
+<meta name="description" content="Mock tax authority e-services portal used to demonstrate Countly product analytics. Not a real government service.">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232CAE5C'/%3E%3Cpath d='M9 22V10h6.2c2.6 0 4.2 1.4 4.2 3.6 0 1.7-1 2.9-2.6 3.3L23 22h-3.4l-3.4-4.6h-2.1V22H9zm5.1-6.9h1.7c1 0 1.6-.5 1.6-1.4s-.6-1.4-1.6-1.4h-1.7v2.8z' fill='%23fff'/%3E%3C/svg%3E">
+
+<!-- 1) Countly Web SDK from the official CDN -->
+<script src="https://cdn.jsdelivr.net/npm/countly-sdk-web@latest/lib/countly.min.js"></script>
+<!-- 2) Demo configuration (app key goes in here) -->
+<script src="config.js"></script>
+<!-- 3) EmaraTax model bridge: translates the portal taxonomy into the target app's tracking plan -->
+<script src="model-bridge.js"></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <div class="wordmark">
+      <span class="wordmark-mark" aria-hidden="true">eS</span>
+      <span class="wordmark-text">
+        <strong data-i18n="brand">e-Services Portal</strong>
+        <em data-i18n="brandDemo">Demo</em>
+      </span>
+    </div>
+
+    <div class="header-tools">
+      <div class="ab-badge" id="abBadge" title="Remote-config driven A/B assignment">
+        <span class="ab-badge-label" data-i18n="abBadgeLabel">A/B layout</span>
+        <span class="ab-badge-value" id="abBadgeValue">…</span>
+        <span class="ab-badge-source" id="abBadgeSource"></span>
+      </div>
+
+      <label class="tool">
+        <span class="tool-label" data-i18n="persona">Taxpayer persona</span>
+        <select id="personaSelect"></select>
+      </label>
+
+      <button type="button" class="lang-toggle" id="langToggle" aria-live="polite">
+        <span id="langToggleText">العربية</span>
+      </button>
+    </div>
+  </div>
+
+  <nav class="site-nav" aria-label="Primary">
+    <div class="shell nav-inner" id="mainNav"></div>
+  </nav>
+</header>
+
+<main id="main" class="shell" tabindex="-1">
+  <div id="app"></div>
+</main>
+
+<!-- ====================================================================
+     DEMO CONTROLS - deliberately visually separate from the portal.
+     Nothing here exists in a real service; it is here so the presenter
+     can trigger errors, APM traces and identity changes on stage.
+     ==================================================================== -->
+<section class="demo-panel" id="demoPanel" aria-labelledby="demoPanelTitle">
+  <div class="shell">
+    <div class="demo-panel-head">
+      <h2 id="demoPanelTitle">⚙ Demo controls <span class="demo-tag">presenter only — not part of the service</span></h2>
+      <button type="button" class="demo-collapse" id="demoCollapse" aria-expanded="true">Hide</button>
+    </div>
+
+    <div class="demo-panel-body" id="demoPanelBody">
+      <div class="demo-grid">
+        <div class="demo-group">
+          <h3>Error tracking</h3>
+          <button type="button" class="btn btn-demo" id="btnUnhandledError">Throw unhandled JS error</button>
+          <button type="button" class="btn btn-demo" id="btnHandledError">Log handled error</button>
+          <p class="demo-hint">Unhandled = non-fatal crash report via <code>track_errors()</code>. Handled = <code>Countly.log_error()</code>.</p>
+        </div>
+
+        <div class="demo-group">
+          <h3>Performance</h3>
+          <button type="button" class="btn btn-demo" id="btnSlowApi">Fire slow fake API call</button>
+          <p class="demo-hint">Sends an APM network trace for <code>/api/returns/submit</code> (~2.4&nbsp;s) via <code>report_trace()</code>.</p>
+        </div>
+
+        <div class="demo-group">
+          <h3>Identity</h3>
+          <button type="button" class="btn btn-demo" id="btnResetDevice">Reset device id (new user)</button>
+          <button type="button" class="btn btn-demo" id="btnClearQueue">Clear stored SDK queue</button>
+          <p class="demo-hint">Reset = new hashed account id, then reload — a brand-new user. Clear queue = drop requests the SDK is still holding from an earlier run (use this if you see stale 400s).</p>
+          <p class="demo-hint" id="deviceIdLine"></p>
+        </div>
+
+        <div class="demo-group">
+          <h3>Filing back end</h3>
+          <label class="switch">
+            <input type="checkbox" id="toggleBackendFail">
+            <span>Simulate back-end failure on submit</span>
+          </label>
+          <p class="demo-hint">When on, submitting a return fires <code>filing_submission_failed</code> instead of <code>filing_submitted</code>.</p>
+        </div>
+
+        <div class="demo-group">
+          <h3>Experiment</h3>
+          <label class="tool tool-block">
+            <span class="tool-label">Force A/B layout</span>
+            <select id="forceVariant">
+              <option value="">(use remote config)</option>
+              <option value="control">control</option>
+              <option value="variant_a_fewer_fields">variant_a_fewer_fields</option>
+              <option value="variant_b_guided">variant_b_guided</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-demo" id="btnRefetchRC">Re-fetch remote config</button>
+        </div>
+
+        <div class="demo-group">
+          <h3>In-app messages</h3>
+          <label class="tool tool-block">
+            <span class="tool-label">Message to fire</span>
+            <select id="fireInAppSelect">
+              <option value="login">Welcome + Rate this service (sign-in)</option>
+              <option value="start">Have your figures ready (return started)</option>
+              <option value="validation">Validation-error help</option>
+              <option value="submitted">Post-filing survey (return submitted)</option>
+              <option value="payment">Payment reminder</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-demo" id="btnFireInApp">Fire in-app message</button>
+          <p class="demo-hint">Sends the trigger event; Countly shows the message in ~15&nbsp;s, in the portal's language. Most messages show once per visitor (the rating every time) — use <em>Reset device id</em> for a fresh visitor. Crash recovery: use <em>Throw unhandled JS error</em> (~5&nbsp;min).</p>
+        </div>
+
+        <div class="demo-group">
+          <h3>Live validation</h3>
+          <a class="btn btn-demo" id="linkEventLog" href="#" target="_blank" rel="noopener noreferrer">Open Countly dashboard ↗</a>
+          <p class="demo-hint">Event Log / Drill shows the events below arriving in near real time.</p>
+        </div>
+      </div>
+
+      <div class="demo-feed">
+        <div class="demo-feed-head">
+          <h3>Sent to Countly <span class="demo-feed-count" id="feedCount">0</span></h3>
+          <button type="button" class="btn btn-demo btn-inline" id="btnCopyEvents">Copy last 10 events as JSON</button>
+        </div>
+        <p class="demo-hint">Each line is one thing handed to the SDK: local time · what it was · the event key · its segmentation. Point at a key here, then find the same key and segmentation in the dashboard's incoming data.</p>
+        <ol id="eventFeed" class="event-feed"><li class="feed-empty">Nothing sent yet.</li></ol>
+        <div id="eventJsonWrap" hidden>
+          <p class="demo-hint" id="eventJsonNote"></p>
+          <textarea id="eventJson" class="event-json" rows="8" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <p class="demo-status" id="sdkStatus"></p>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="shell">
+    <p><strong>This is a Countly product demonstration, not a real government service.</strong></p>
+    <p>No real tax authority branding, logos or crests are used. All taxpayer data, amounts, references and outcomes shown on these screens are fabricated for the purposes of the demo. Do not enter real personal data.</p>
+    <p class="footer-meta">Instrumented with the Countly Web SDK · <span id="sdkVersionLine">SDK version unknown</span></p>
+  </div>
+</footer>
+
+<script src="i18n-ar.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
