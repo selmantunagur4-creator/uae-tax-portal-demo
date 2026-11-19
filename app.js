@@ -576,7 +576,11 @@
   }
 
   function setUserProperty(key, value) {
-    if (BRIDGE) { var mu = BRIDGE.mapUserKey(key, value); key = mu.key; value = mu.value; }
+    if (BRIDGE) {
+      var mu = BRIDGE.mapUserKey(key, value);
+      if (!mu) { var skipped = {}; skipped[key] = value; feed("user", key + "  →  (not in model)", skipped); return; }
+      key = mu.key; value = mu.value;
+    }
     try {
       if (state.sdkOk) {
         Countly.userData.set(key, value);
@@ -649,6 +653,8 @@
         if (value === null || typeof value === "undefined") {
           if (remoteConfig && typeof remoteConfig === "object") { value = remoteConfig[AB_KEY]; }
         }
+        // R01 project: the experiment's values (single_form / guided_wizard) map onto the layouts the portal renders
+        if (typeof value === "string" && CFG.AB_VALUE_MAP && CFG.AB_VALUE_MAP[value]) { value = CFG.AB_VALUE_MAP[value]; }
         if (typeof value === "string" && AB_VARIANTS.indexOf(value) !== -1) {
           applyVariant(value, "remote config");
         } else {
@@ -2405,9 +2411,9 @@
     var fireSel = $("fireInAppSelect");
     if (fireMsg && fireSel) {
       var FIRE = {
-        login: ["login", { method: "UAE Pass", result: "success", failure_reason: "none" }],
+        welcome: ["portal_account_created", {}],
         start: ["filing_started", { return_type: RETURN_TYPE, period: PERIOD, entry_point: "dashboard" }],
-        validation: ["filing_validation_error", { step_key: "supplies", field: "emirate_split", error_code: "E204_MISMATCH" }],
+        validation: ["help_opened", { surface: "Guided Help", context_view: "/returns/supplies" }],
         submitted: ["filing_submitted", { return_type: RETURN_TYPE, first_attempt_success: "true", filed_on_time: "true", ab_variant: state.variant }],
         payment: ["reminder_opened", { reminder_type: "payment_due" }]
       };

@@ -107,9 +107,8 @@
             <span class="tool-label">Force A/B layout</span>
             <select id="forceVariant">
               <option value="">(use remote config)</option>
-              <option value="control">control</option>
-              <option value="variant_a_fewer_fields">variant_a_fewer_fields</option>
-              <option value="variant_b_guided">variant_b_guided</option>
+              <option value="control">control (single_form)</option>
+              <option value="variant_b_guided">variant_b_guided (guided_wizard)</option>
             </select>
           </label>
           <button type="button" class="btn btn-demo" id="btnRefetchRC">Re-fetch remote config</button>
@@ -120,9 +119,9 @@
           <label class="tool tool-block">
             <span class="tool-label">Message to fire</span>
             <select id="fireInAppSelect">
-              <option value="login">Welcome + Rate this service (sign-in)</option>
+              <option value="welcome">Welcome (new portal account)</option>
               <option value="start">Have your figures ready (return started)</option>
-              <option value="validation">Validation-error help</option>
+              <option value="validation">Validation help (guided help opened)</option>
               <option value="submitted">Post-filing survey (return submitted)</option>
               <option value="payment">Payment reminder</option>
             </select>

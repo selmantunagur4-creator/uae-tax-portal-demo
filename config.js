@@ -5,7 +5,8 @@
  * =====================================================================
  *
  *  THE LIVE APP KEY IS ALREADY SET ON THE "APP_KEY" LINE BELOW.
- *  This copy targets the UAE Tax Authority app on https://trial-uaetaxauthority.count.ly (moved from staging.count.ly on 2026-10-01; same app key)
+ *  This copy targets the "UAE Tax e-Services (R01)" app on https://trial-uaetaxauthority.count.ly (switched 2026-11-19;
+ *  events follow data model R01 through model-bridge.js)
  *  (the original in C:\Countly\DTA_Demo\portal still targets demo-ui.count.ly).
  *
  *  To point the portal at a different Countly app, replace that one
@@ -31,7 +32,7 @@ window.DTA_DEMO_CONFIG = {
    *    code path still runs - the server just rejects each request
    *    with HTTP 400.
    * --------------------------------------------------------------- */
-  APP_KEY: "d5e48c5851466f83f0d3077142c649b0a5f1a0bf",   // UAE Tax Authority (trial-uaetaxauthority.count.ly, same key as on staging)
+  APP_KEY: "d94bf542d21e288d5bb6f5d982f1495a5f33a1ba",   // UAE Tax e-Services (R01), trial-uaetaxauthority.count.ly (data model R01)
 
   /* ---------------------------------------------------------------
    * 3) Link used by the "Open Countly" button in the demo panel.
@@ -59,8 +60,10 @@ window.DTA_DEMO_CONFIG = {
    *    Create a remote config value with this key in Countly and
    *    attach the A/B test to it to drive live variant assignment.
    * --------------------------------------------------------------- */
-  AB_TEST_KEY: "filing_form_layout",
-  AB_VARIANTS: ["control", "variant_a_fewer_fields", "variant_b_guided"],
+  AB_TEST_KEY: "vat_return_layout",
+  AB_VARIANTS: ["control", "variant_b_guided"],
+  // R01 experiment "VAT 201 layout: guided wizard vs single form" -> layouts the portal renders
+  AB_VALUE_MAP: { single_form: "control", guided_wizard: "variant_b_guided" },
 
   /* ---------------------------------------------------------------
    * 7) How long to wait for remote config before falling back to a
